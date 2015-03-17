@@ -6,7 +6,7 @@
 ssize_t read_(int fd, void *buf, size_t count) {
     ssize_t sum = 0, readResult;
     do {
-        readResult = read(fd, buf + sum, count - sum);
+        readResult = read(fd, buf, count - sum);
         if (readResult == -1)
             return readResult;
         buf += readResult;
@@ -18,10 +18,11 @@ ssize_t read_(int fd, void *buf, size_t count) {
 ssize_t write_(int fd, const void *buf, size_t count) {
     ssize_t result = count;
     while (count > 0) {
-        ssize_t writeResult = write(fd, buf + (result - count), count);
+        ssize_t writeResult = write(fd, buf, count);
         if (writeResult == -1)
             return writeResult;
         count -= writeResult;
+        buf += writeResult;
     }
     return result;
 }
