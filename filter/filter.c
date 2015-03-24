@@ -6,13 +6,11 @@
 
 #define BUFFER_SIZE 4096
 
-const char DELIMITER = 10;
+const char DELIMITER = '\n';
 
 char buf[BUFFER_SIZE];
 char *exec, **argValues;
 int argCount;
-
-#include "stdio.h"
 
 bool processWord(char *buf, int len) {
     buf[len] = '\0';
@@ -25,12 +23,11 @@ bool processWord(char *buf, int len) {
     return result;
 }
 
-
 int main(int argc, char *argv[]) {
-    argCount = argc - 1;
+    argCount = argc;
     exec = argv[1];
-    memmove(argv + 1, argv + 2, argc - 2);
-    argValues = argv + 1;
+    memmove(argv, argv + 1, argc - 1);
+    argValues = argv;
     int prevPos = 0;
     ssize_t readCount;
     while (true) {
@@ -44,7 +41,7 @@ int main(int argc, char *argv[]) {
         }
         int last = 0;
         for (int i = 0; i < prevPos + readCount; i++) {
-            if (buf[i] == ' ') {
+            if (buf[i] == DELIMITER) {
                 if (processWord(buf + last, i - last)) {
                     write_(STDOUT_FILENO, &DELIMITER, 1);
                 }

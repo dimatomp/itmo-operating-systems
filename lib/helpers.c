@@ -22,9 +22,10 @@ ssize_t read_(int fd, void *buf, size_t count) {
 }
 
 ssize_t write_(int fd, const void *buf, size_t count) {
+    char *data = (char*) buf;
     ssize_t result = count;
     while (count > 0) {
-        ssize_t writeResult = write(fd, buf + result - count, count);
+        ssize_t writeResult = write(fd, data + result - count, count);
         if (writeResult == -1)
             return writeResult;
         count -= writeResult;
@@ -67,8 +68,8 @@ int spawn(const char *file, char* const argv[]) {
             fullName[PATH - last] = '/';
             strncpy(fullName + (PATH - last) + 1, file, fileLen);
             fullName[PATH - last + 1 + fileLen] = 0;
-            stat(fullName, &buf);
-            if (S_ISREG(buf.st_mode)) {
+            int statResult = stat(fullName, &buf);
+            if (statResult != -1 && S_ISREG(buf.st_mode)) {
                 break;
             }
             last = PATH + 1;
