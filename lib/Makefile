@@ -1,2 +1,4 @@
+CFLAGS=-shared -Wall -fPIC -std=c99
+
 all:
-	gcc -shared -Wall -o libhelpers.so -fPIC -std=c99 helpers.c
+	gcc $(CFLAGS) -o libhelpers.so helpers.c

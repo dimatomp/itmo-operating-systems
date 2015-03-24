@@ -24,11 +24,10 @@ ssize_t read_(int fd, void *buf, size_t count) {
 ssize_t write_(int fd, const void *buf, size_t count) {
     ssize_t result = count;
     while (count > 0) {
-        ssize_t writeResult = write(fd, buf, count);
+        ssize_t writeResult = write(fd, buf + result - count, count);
         if (writeResult == -1)
             return writeResult;
         count -= writeResult;
-        buf += writeResult;
     }
     return result;
 }
@@ -42,7 +41,7 @@ ssize_t read_until(int fd, void *buf, size_t count, char delimiter) {
         if (result == 0)
             break;
         if (result == -1) {
-            if (errno != EAGAIN)
+            if (errno != EAGAIN && errno != EWOULDBLOCK)
                 return result;
             result = 0;
         }
