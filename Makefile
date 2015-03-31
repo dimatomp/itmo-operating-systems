@@ -9,5 +9,11 @@ revwords: libhelpers.so
 filter: libhelpers.so
 	$(MAKE) -C filter
 
+bufcat: libbufio.so
+	$(MAKE) -C bufcat
+
 libhelpers.so:
-	$(MAKE) -C lib
+	$(MAKE) -C lib libhelpers
+
+libbufio.so:
+	$(MAKE) -C lib libbufio
