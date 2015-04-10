@@ -26,8 +26,7 @@ bool processWord(char *buf, int len) {
 int main(int argc, char *argv[]) {
     argCount = argc;
     exec = argv[1];
-    memmove(argv, argv + 1, argc - 1);
-    argValues = argv;
+    argValues = memmove(argv, argv + 1, sizeof(char*) * (argc - 1));
     int prevPos = 0;
     ssize_t readCount;
     while (true) {
