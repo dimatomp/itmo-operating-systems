@@ -89,3 +89,54 @@ ssize_t buf_flush(int fd, struct buf_t *buf, size_t required) {
     memmove(buf->content, cIndex, buf->size);
     return failure ? -1 : (oldSize - buf->size);
 }
+
+#define NEWLINE '\n'
+
+ssize_t buf_getline(int fd, struct buf_t *buf, char *dest) {
+    size_t cPos = 0;
+    bool endOfFile = false;
+    for (;; cPos++) {
+        if (cPos >= buf->size) {
+            size_t before = buf->size;
+            ssize_t result = buf_fill(fd, buf, 1);
+            if (result == -1)
+                return -1;
+            if (result == before) {
+                endOfFile = true;
+                break;
+            }
+        }
+        dest[cPos] = buf->content[cPos];
+        if (buf->content[cPos] == NEWLINE)
+            break;
+    }
+    if (!endOfFile)
+        cPos++;
+    memmove(buf->content, buf->content + cPos, buf->size - cPos);
+    buf->size -= cPos;
+    if (endOfFile)
+        dest[cPos++] = '\0';
+    return cPos;
+}
+
+ssize_t buf_write(int fd, struct buf_t *buf, char *src, size_t len) {
+    ssize_t result = 0, remaining = len;
+    while (remaining > 0) {
+        if (buf->capacity - buf->size < remaining) {
+            memcpy(buf->content + buf->size, src + (len - remaining),
+                    buf->capacity - buf->size);
+            remaining -= (buf->capacity - buf->size);
+            buf->size = buf->capacity;
+            ssize_t cOut = buf_flush(fd, buf, 1);
+            if (cOut == -1)
+                return -1;
+            result += cOut;
+        } else {
+            memcpy(buf->content + buf->size, src + (len - remaining),
+                    remaining);
+            buf->size += remaining;
+            remaining = 0;
+        }
+    }
+    return result;
+}
