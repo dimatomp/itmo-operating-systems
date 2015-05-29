@@ -1,4 +1,4 @@
-all: cat revwords filter
+all: cat revwords filter bufcat
 
 cat: libhelpers.so
 	$(MAKE) -C cat

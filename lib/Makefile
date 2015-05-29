@@ -1,4 +1,4 @@
-CFLAGS=-shared -Wall -fPIC -std=c99
+CFLAGS=-shared -Wall -D_POSIX_C_SOURCE=200809L -fPIC -std=c99
 
 all: libhelpers libbufio
 

@@ -5,6 +5,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
+#include <signal.h>
 #include <string.h>
 #include <memory.h>
 #include <stdlib.h>
@@ -96,4 +97,75 @@ int spawn(const char *file, char* const argv[]) {
         return WEXITSTATUS(c);
     }
     return -1;
+}
+
+struct execargs_t {
+    char **argv;
+};
+
+struct execargs_t *eargs_create(char **argv) {
+    struct execargs_t *result = malloc(sizeof(struct execargs_t));
+    if (result != NULL) {
+        result->argv = argv;
+    }
+    return result;
+}
+
+void eargs_delete(struct execargs_t *eargs) {
+    free(eargs);
+}
+
+int exec(struct execargs_t *eargs) {
+    return execvp(eargs->argv[0], eargs->argv);
+}
+
+static int processCnt;
+static int *processIds;
+
+static void handleSigint(int signal) {
+    for (int i = 0; i < processCnt; i++) {
+        kill(processIds[i], SIGINT);
+    }
+}
+
+int runpiped(struct execargs_t **programs, size_t n) {
+    int pids[n];
+    processCnt = n;
+    processIds = pids;
+    int stdin_before = dup(STDIN_FILENO);
+    int stdout_before = dup(STDOUT_FILENO);
+    int pipes[2];
+    for (int i = 0; i < n; i++) {
+        if (i > 0) {
+            dup2(pipes[0], STDIN_FILENO);
+            close(pipes[0]);
+        }
+        if (i < n - 1) {
+            pipe(pipes);
+            dup2(pipes[1], STDOUT_FILENO);
+            close(pipes[1]);
+        }
+        int pid = fork();
+        if (pid == 0) {
+            exec(programs[i]);
+            close(STDIN_FILENO);
+            close(STDOUT_FILENO);
+            _exit(errno);
+        } else {
+            pids[i] = pid;
+        }
+    }
+    dup2(stdin_before, STDIN_FILENO);
+    dup2(stdout_before, STDOUT_FILENO);
+    close(stdin_before);
+    close(stdout_before);
+    struct sigaction action;
+    action.sa_handler = handleSigint;
+    sigemptyset(&action.sa_mask);
+    action.sa_flags = SA_RESTART;
+    struct sigaction prev;
+    sigaction(SIGINT, &action, &prev);
+    for (int i = 0; i < n; i++)
+        waitpid(pids[i], NULL, 0);
+    sigaction(SIGINT, &prev, NULL);
 }
