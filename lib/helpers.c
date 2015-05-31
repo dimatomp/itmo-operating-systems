@@ -134,35 +134,31 @@ int runpiped(struct execargs_t **programs, size_t n) {
     processIds = pids;
     int stdin_before = dup(STDIN_FILENO);
     int stdout_before = dup(STDOUT_FILENO);
-    int pipes[2];
+    int pipes[2], prevStdin = stdout_before;
     for (int i = 0; i < n; i++) {
-        if (i > 0) {
-            dup2(pipes[0], STDIN_FILENO);
-            close(pipes[0]);
-        }
         if (i < n - 1) {
             pipe(pipes);
-            dup2(pipes[1], STDOUT_FILENO);
-            close(pipes[1]);
         } else {
-            dup2(stdout_before, STDOUT_FILENO);
+            pipes[1] = stdout_before;
         }
         int pid = fork();
         if (pid == 0) {
+            dup2(prevStdin, STDIN_FILENO);
+            close(prevStdin);
+            dup2(pipes[1], STDOUT_FILENO);
+            close(pipes[1]);
             exec(programs[i]);
             int result = errno;
             close(STDIN_FILENO);
             close(STDOUT_FILENO);
             _exit(result);
         } else {
-            close(STDIN_FILENO);
-            close(STDOUT_FILENO);
+            close(prevStdin);
+            prevStdin = pipes[0];
+            close(pipes[1]);
             pids[i] = pid;
         }
     }
-    dup2(stdin_before, STDIN_FILENO);
-    dup2(stdout_before, STDOUT_FILENO);
-    close(stdin_before);
     close(stdout_before);
     struct sigaction action;
     action.sa_handler = handleSigint;
