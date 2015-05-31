@@ -144,6 +144,8 @@ int runpiped(struct execargs_t **programs, size_t n) {
             pipe(pipes);
             dup2(pipes[1], STDOUT_FILENO);
             close(pipes[1]);
+        } else {
+            dup2(stdout_before, STDOUT_FILENO);
         }
         int pid = fork();
         if (pid == 0) {
