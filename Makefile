@@ -1,4 +1,4 @@
-all: cat revwords filter bufcat
+all: cat revwords filter bufcat simplesh
 
 cat: libhelpers.so
 	$(MAKE) -C cat
@@ -11,6 +11,9 @@ filter: libhelpers.so
 
 bufcat: libbufio.so
 	$(MAKE) -C bufcat
+
+simplesh: libhelpers.so libbufio.so
+	$(MAKE) -C simplesh
 
 libhelpers.so:
 	$(MAKE) -C lib libhelpers

@@ -9,13 +9,13 @@
 const char DELIMITER = '\n';
 
 char buf[BUFFER_SIZE];
-char *exec, **argValues;
+char *execName, **argValues;
 int argCount;
 
 bool processWord(char *buf, int len) {
     buf[len] = '\0';
     argValues[argCount - 1] = buf;
-    bool result = (spawn(exec, argValues) == 0);
+    bool result = (spawn(execName, argValues) == 0);
     if (result) {
         write_(STDOUT_FILENO, buf, len);
     }
@@ -25,7 +25,7 @@ bool processWord(char *buf, int len) {
 
 int main(int argc, char *argv[]) {
     argCount = argc;
-    exec = argv[1];
+    execName = argv[1];
     argValues = memmove(argv, argv + 1, sizeof(char*) * (argc - 1));
     int prevPos = 0;
     ssize_t readCount;

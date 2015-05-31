@@ -148,10 +148,13 @@ int runpiped(struct execargs_t **programs, size_t n) {
         int pid = fork();
         if (pid == 0) {
             exec(programs[i]);
+            int result = errno;
             close(STDIN_FILENO);
             close(STDOUT_FILENO);
-            _exit(errno);
+            _exit(result);
         } else {
+            close(STDIN_FILENO);
+            close(STDOUT_FILENO);
             pids[i] = pid;
         }
     }
