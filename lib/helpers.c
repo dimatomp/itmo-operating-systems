@@ -170,6 +170,7 @@ int runpiped(struct execargs_t **programs, size_t n) {
     sigaddset(&action.sa_mask, SIGCHLD);
     action.sa_flags = SA_RESTART;
     sigaction(SIGINT, &action, NULL);
+    sigaction(SIGCHLD, &action, NULL);
     for (int i = 0; i < n; i++)
         waitpid(pids[i], NULL, 0);
     sigaction(SIGINT, &prevInt, NULL);
