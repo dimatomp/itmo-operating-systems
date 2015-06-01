@@ -134,32 +134,64 @@ int runpiped(struct execargs_t **programs, size_t n) {
     processIds = pids;
     int prevStdin = dup(STDIN_FILENO);
     int stdout_before = dup(STDOUT_FILENO);
+    if (prevStdin == -1 || stdout_before == -1) {
+        int result = errno;
+        close(prevStdin);
+        close(stdout_before);
+        errno = result;
+        return -1;
+    }
     int pipes[2];
     for (int i = 0; i < n; i++) {
         if (i < n - 1) {
-            pipe(pipes);
+            if (pipe(pipes) == -1) {
+                int result = errno;
+                for (int j = 0; j < i; j++) {
+                    kill(pids[i], SIGKILL);
+                    waitpid(pids[i], NULL, 0);
+                }
+                close(prevStdin);
+                close(stdout_before);
+                errno = result;
+                return -1;
+            }
         } else {
             pipes[1] = stdout_before;
         }
         int pid = fork();
-        if (pid == 0) {
-            dup2(prevStdin, STDIN_FILENO);
-            close(prevStdin);
-            dup2(pipes[1], STDOUT_FILENO);
-            close(pipes[1]);
-            exec(programs[i]);
+        if (pid == -1) {
             int result = errno;
-            close(STDIN_FILENO);
-            close(STDOUT_FILENO);
-            _exit(result);
-        } else {
+            for (int j = 0; j < i; j++) {
+                kill(pids[i], SIGKILL);
+                waitpid(pids[i], NULL, 0);
+            }
             close(prevStdin);
+            close(stdout_before);
+            errno = result;
+            return -1;
+        } else if (pid == 0) {
+            if (dup2(prevStdin, STDIN_FILENO) == -1
+                    || dup2(pipes[1], STDOUT_FILENO) == -1
+                    || close(prevStdin) == -1
+                    || close(pipes[1]) == -1
+                    || exec(programs[i]) == -1) {
+                _exit(errno);
+            }
+        } else {
+            if (close(prevStdin) == -1 || close(pipes[1]) == -1) {
+                int result = errno;
+                for (int j = 0; j <= i; j++) {
+                    kill(pids[i], SIGKILL);
+                    waitpid(pids[i], NULL, 0);
+                }
+                close(stdout_before);
+                errno = result;
+                return -1;
+            }
             prevStdin = pipes[0];
-            close(pipes[1]);
             pids[i] = pid;
         }
     }
-    close(stdout_before);
     struct sigaction prevInt, prevChld;
     sigaction(SIGINT, NULL, &prevInt);
     sigaction(SIGCHLD, NULL, &prevChld);
@@ -170,9 +202,10 @@ int runpiped(struct execargs_t **programs, size_t n) {
     sigaddset(&action.sa_mask, SIGCHLD);
     action.sa_flags = SA_RESTART;
     sigaction(SIGINT, &action, NULL);
-    sigaction(SIGCHLD, &action, NULL);
+    //sigaction(SIGCHLD, &action, NULL);
     for (int i = 0; i < n; i++)
         waitpid(pids[i], NULL, 0);
     sigaction(SIGINT, &prevInt, NULL);
     sigaction(SIGCHLD, &prevChld, NULL);
+    return 0;
 }
