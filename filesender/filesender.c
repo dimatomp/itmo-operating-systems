@@ -4,8 +4,15 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <fcntl.h>
+#include <arpa/inet.h>
+#include <netinet/ip.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <errno.h>
 
 #define BUFSIZE 4096
+#define FAIL(str) {perror(str); return errno;}
 
 int main(int argc, char *argv[]) {
     int portNum = atoi(argv[1]);
@@ -15,29 +22,31 @@ int main(int argc, char *argv[]) {
     inet_pton(AF_INET, "0.0.0.0", &addr.sin_addr.s_addr);
     int sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (sock == -1)
-        perror("socket");
-    if (connect(sock, &addr, sizeof(addr)) == -1)
-        perror("connect");
+        FAIL("socket");
+    if (bind(sock, &addr, sizeof(addr)) == -1)
+        FAIL("bind");
     if (listen(sock, 5) == -1) {
         close(sock);
-        perror("listen");
+        FAIL("listen");
     }
-    while ((int clientFd = accept(sock, &addr, sizeof(addr))) != -1) {
+    int clientFd;
+    while ((clientFd = accept(sock, NULL, NULL)) != -1) {
         int pid = fork();
         if (pid == -1) {
             close(sock);
-            perror("fork");
+            FAIL("fork");
         } else if (pid == 0) {
             close(sock);
             int nFile = open(argv[2], O_RDONLY);
             if (nFile == -1)
-                perror("open");
+                FAIL("open");
             struct buf_t *buffer = buf_new(BUFSIZE);
-            while ((ssize_t fillSize = buf_fill(nFile, buffer, 1)) != 0) {
+            ssize_t fillSize;
+            while ((fillSize = buf_fill(nFile, buffer, 1)) != 0) {
                 if (fillSize == -1)
-                    perror("buf_fill");
+                    FAIL("buf_fill");
                 if (buf_flush(clientFd, buffer, 1) == -1)
-                    perror("buf_flush");
+                    FAIL("buf_flush");
             }
             close(clientFd);
             return 0;

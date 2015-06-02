@@ -124,7 +124,7 @@ static int *processIds;
 
 static void handleSigint(int signal) {
     for (int i = 0; i < processCnt; i++) {
-        kill(processIds[i], SIGTERM);
+        kill(processIds[i], SIGINT);
     }
 }
 
@@ -141,6 +141,12 @@ int runpiped(struct execargs_t **programs, size_t n) {
         errno = result;
         return -1;
     }
+    struct sigaction prevInt;
+    struct sigaction action;
+    action.sa_handler = handleSigint;
+    sigemptyset(&action.sa_mask);
+    action.sa_flags = SA_RESTART;
+    sigaction(SIGINT, &action, &prevInt);
     int pipes[2];
     for (int i = 0; i < n; i++) {
         if (i < n - 1) {
@@ -170,6 +176,8 @@ int runpiped(struct execargs_t **programs, size_t n) {
             errno = result;
             return -1;
         } else if (pid == 0) {
+            if (i < n - 1)
+                close(pipes[0]);
             if (dup2(prevStdin, STDIN_FILENO) == -1
                     || dup2(pipes[1], STDOUT_FILENO) == -1
                     || close(prevStdin) == -1
@@ -192,20 +200,8 @@ int runpiped(struct execargs_t **programs, size_t n) {
             pids[i] = pid;
         }
     }
-    struct sigaction prevInt, prevChld;
-    sigaction(SIGINT, NULL, &prevInt);
-    sigaction(SIGCHLD, NULL, &prevChld);
-    struct sigaction action;
-    action.sa_handler = handleSigint;
-    sigemptyset(&action.sa_mask);
-    sigaddset(&action.sa_mask, SIGINT);
-    sigaddset(&action.sa_mask, SIGCHLD);
-    action.sa_flags = SA_RESTART;
-    sigaction(SIGINT, &action, NULL);
-    //sigaction(SIGCHLD, &action, NULL);
     for (int i = 0; i < n; i++)
-        waitpid(pids[i], NULL, 0);
+        wait(NULL);
     sigaction(SIGINT, &prevInt, NULL);
-    sigaction(SIGCHLD, &prevChld, NULL);
     return 0;
 }
