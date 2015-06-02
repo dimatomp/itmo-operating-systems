@@ -1,30 +1,32 @@
-#include <string.h>
 #include <bufio.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <arpa/inet.h>
-#include <netinet/ip.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <errno.h>
+#include <netdb.h>
 
 #define BUFSIZE 4096
 #define FAIL(str) {perror(str); return errno;}
 
 int main(int argc, char *argv[]) {
-    int portNum = atoi(argv[1]);
-    struct sockaddr_in addr;
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(portNum);
-    inet_pton(AF_INET, "0.0.0.0", &addr.sin_addr.s_addr);
     int sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (sock == -1)
         FAIL("socket");
-    if (bind(sock, &addr, sizeof(addr)) == -1)
+
+    struct addrinfo hint;
+    hint.ai_flags = 0;
+    hint.ai_family = AF_INET;
+    hint.ai_socktype = SOCK_STREAM;
+    hint.ai_protocol = IPPROTO_TCP;
+    struct addrinfo *addr;
+    getaddrinfo("localhost", argv[1], &hint, &addr);
+    if (bind(sock, addr->ai_addr, addr->ai_addrlen) == -1)
         FAIL("bind");
+    freeaddrinfo(addr);
+
     if (listen(sock, 10) == -1) {
         close(sock);
         FAIL("listen");
