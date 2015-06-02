@@ -25,7 +25,7 @@ int main(int argc, char *argv[]) {
         FAIL("socket");
     if (bind(sock, &addr, sizeof(addr)) == -1)
         FAIL("bind");
-    if (listen(sock, 5) == -1) {
+    if (listen(sock, 10) == -1) {
         close(sock);
         FAIL("listen");
     }
