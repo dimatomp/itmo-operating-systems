@@ -1,20 +1,16 @@
-#include <string.h>
 #include <bufio.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <arpa/inet.h>
-#include <netinet/ip.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <netdb.h>
 
 #define BUFSIZE 4096
 #define FAIL(str) {perror(str); return errno;}
 
-void transfer(int from, int to) {
+int transfer(int from, int to) {
     struct buf_t *buffer = buf_new(BUFSIZE);
     ssize_t fillSize;
     while ((fillSize = buf_fill(from, buffer, 1)) != 0) {
@@ -25,24 +21,32 @@ void transfer(int from, int to) {
     }
     close(from);
     close(to);
+    return 0;
 }
 
 int main(int argc, char *argv[]) {
-    struct sockaddr_in addr;
-    addr.sin_family = AF_INET;
-    inet_pton(AF_INET, "0.0.0.0", &addr.sin_addr.s_addr);
     int sock1 = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP),
         sock2 = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (sock1 == -1 || sock2 == -1)
         FAIL("socket");
-    addr.sin_port = htons(atoi(argv[1]));
-    if (bind(sock1, &addr, sizeof(addr)) == -1)
+
+    struct addrinfo hint;
+    hint.ai_flags = 0;
+    hint.ai_family = AF_INET;
+    hint.ai_socktype = SOCK_STREAM;
+    hint.ai_protocol = IPPROTO_TCP;
+    struct addrinfo *result;
+    getaddrinfo("localhost", argv[1], &hint, &result);
+    if (bind(sock1, result->ai_addr, result->ai_addrlen) == -1)
         FAIL("bind");
-    addr.sin_port = htons(atoi(argv[2]));
-    if (bind(sock2, &addr, sizeof(addr)) == -1) {
+    freeaddrinfo(result);
+    getaddrinfo("localhost", argv[2], &hint, &result);
+    if (bind(sock2, result->ai_addr, result->ai_addrlen) == -1) {
         close(sock1);
         FAIL("bind");
     }
+    freeaddrinfo(result);
+
     if (listen(sock1, 10) == -1 || listen(sock2, 10) == -1) {
         close(sock1);
         close(sock2);
@@ -62,11 +66,10 @@ int main(int argc, char *argv[]) {
             if (pid == -1) {
                 FAIL("fork");
             } else if (pid == 0) {
-                transfer(client1, client2);
+                return transfer(client1, client2);
             } else {
-                transfer(client2, client1);
+                return transfer(client2, client1);
             }
-            return 0;
         } else {
             close(client1);
             close(client2);
