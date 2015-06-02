@@ -18,8 +18,6 @@ int transfer(int from, int to) {
         if (buf_flush(to, buffer, 1) == -1)
             FAIL("buf_flush");
     }
-    close(from);
-    close(to);
     return 0;
 }
 

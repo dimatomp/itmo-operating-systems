@@ -1,22 +1,16 @@
-all: cat revwords filter bufcat simplesh
+TASKS=cat revwords filter bufcat simplesh filesender bipiper
+.PHONY: $(TASKS)
 
-cat: libhelpers.so
-	$(MAKE) -C cat
+export CFLAGS=-std=c99 -I../lib -L../lib -lhelpers -lbufio -Wall
 
-revwords: libhelpers.so
-	$(MAKE) -C revwords
+all: $(TASKS)
 
-filter: libhelpers.so
-	$(MAKE) -C filter
+libraries:
+	$(MAKE) -C lib
 
-bufcat: libbufio.so
-	$(MAKE) -C bufcat
+$(TASKS): BINARIES=$@
+bipiper: BINARIES=forking
+bipiper: CFLAGS+=-D_POSIX_C_SOURCE=200112L
 
-simplesh: libhelpers.so libbufio.so
-	$(MAKE) -C simplesh
-
-libhelpers.so:
-	$(MAKE) -C lib libhelpers
-
-libbufio.so:
-	$(MAKE) -C lib libbufio
+$(TASKS):
+	@$(MAKE) --no-print-directory -C $@ $(BINARIES)
