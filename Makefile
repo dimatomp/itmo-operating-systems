@@ -10,7 +10,7 @@ libraries:
 
 $(TASKS): BINARIES=$@
 filesender: CFLAGS+=-D_POSIX_C_SOURCE=200112L
-bipiper: BINARIES=forking
+bipiper: BINARIES=forking polling
 bipiper: CFLAGS+=-D_POSIX_C_SOURCE=200112L
 
 $(TASKS): libraries
